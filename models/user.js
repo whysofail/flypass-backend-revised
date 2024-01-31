@@ -31,10 +31,10 @@ module.exports = (sequelize, DataTypes) => {
       phone: DataTypes.STRING,
       birthDate: DataTypes.STRING,
       gender: DataTypes.STRING,
-      isVerified: DataTypes.BOOLEAN,
       googleId: DataTypes.STRING,
       roleId: DataTypes.INTEGER,
       refreshToken: DataTypes.TEXT,
+      isVerified: DataTypes.BOOLEAN,
     },
     {
       sequelize,

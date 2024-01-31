@@ -1,77 +1,75 @@
-'use strict';
+"use strict";
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('Bookings', {
+    await queryInterface.createTable("Bookings", {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
-        type: Sequelize.INTEGER
+        type: Sequelize.INTEGER,
       },
       bookingCode: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
       },
       roundtrip: {
-        type: Sequelize.BOOLEAN
+        type: Sequelize.BOOLEAN,
       },
       flight1Id: {
         type: Sequelize.INTEGER,
-        references:{
-          model:{
-            tableName: 'Flights'
-          }
-        }
+        references: {
+          model: {
+            tableName: "Flights",
+          },
+        },
       },
       flight2Id: {
         type: Sequelize.INTEGER,
-        references:{
-          model:{
-            tableName: 'Flights'
-          }
-        }
+        references: {
+          model: {
+            tableName: "Flights",
+          },
+        },
       },
       userId: {
         type: Sequelize.INTEGER,
-        references:{
-          model:{
-            tableName: 'Users'
-          }
-        }
+        references: {
+          model: {
+            tableName: "Users",
+          },
+        },
       },
       passengerContactId: {
         type: Sequelize.INTEGER,
         references: {
           model: {
-            tableName: 'PassengerContacts'
-          }
-        }
+            tableName: "PassengerContacts",
+          },
+        },
       },
-      bookingStatusId: {
-        type: Sequelize.INTEGER,
-        references:{
-          model:{
-            tableName: 'BookingStatuses'
-          }
-        }
+      status: {
+        type: Sequelize.ENUM('Waiting','Confirmed'),
       },
       passengerQty: {
         type: Sequelize.INTEGER,
       },
+      totalBaggagePrice: {
+        type: Sequelize.DOUBLE,
+      },
       totalPrice: {
-        type: Sequelize.DOUBLE
+        type: Sequelize.DOUBLE,
       },
       createdAt: {
         allowNull: false,
-        type: Sequelize.DATE
+        type: Sequelize.DATE,
       },
       updatedAt: {
         allowNull: false,
-        type: Sequelize.DATE
-      }
+        type: Sequelize.DATE,
+      },
     });
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('Bookings');
-  }
+    await queryInterface.dropTable("Bookings");
+  },
 };

@@ -1,8 +1,8 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable no-use-before-define */
 /* eslint-disable no-plusplus */
-const randomstring = require('randomstring');
-const jwt = require('jsonwebtoken');
+const randomstring = require('randomstring')
+const jwt = require('jsonwebtoken')
 const {
   Passenger,
   Booking,
@@ -15,9 +15,9 @@ const {
   FlightType,
   Airport,
   BookingStatus,
-} = require('../../models');
-const { createNotification } = require('./notificationController');
-const { flightInc, flightAttr } = require('./flightController');
+} = require('../../models')
+const { createNotification } = require('./notificationController')
+const { flightInc, flightAttr } = require('./flightController')
 
 const flight2Inc = [
   {
@@ -40,14 +40,7 @@ const flight2Inc = [
     model: Airport,
     as: 'arrivalAirport',
   },
-];
-
-const countTotalPrice = async (flight1, flight2, qty) => {
-  const Flight1 = await Flight.findByPk(flight1);
-  const Flight2 = flight2 !== undefined ? await Flight.findByPk(flight2) : 0;
-  const result = Flight1.price * qty + (Flight2 !== 0 ? Flight2.price : Flight2 * qty);
-  return result;
-};
+]
 
 const bookingInc = [
   {
@@ -80,21 +73,21 @@ const handleListBookings = async (req, res) => {
   try {
     const booking = await Booking.findAll({
       include: bookingInc,
-    });
-    res.status(200).json({ booking });
+    })
+    res.status(200).json({ booking })
   } catch (err) {
     res.status(404).json({
       error: {
         name: err.name,
         message: err.message,
       },
-    });
+    })
   }
-};
+}
 
 const handleBookFlight = async (req, res, next) => {
   try {
-    const user = userToken(req);
+    const user = userToken(req)
     const {
       contactTitle,
       contactFirstName,
@@ -103,7 +96,7 @@ const handleBookFlight = async (req, res, next) => {
       contactEmail,
       flight1Id,
       flight2Id,
-    } = req.body;
+    } = req.body
 
     const passengerContact = await PassengerContact.create({
       title: contactTitle,
@@ -111,30 +104,31 @@ const handleBookFlight = async (req, res, next) => {
       lastName: contactLastName,
       phone: contactPhone,
       email: contactEmail,
-    });
+    })
 
-    const passengerData = req.body.passenger;
-    const passenger = await Passenger.bulkCreate(passengerData);
+    const passengerData = req.body.passenger
+    const passenger = await Passenger.bulkCreate(passengerData)
     const passengerBaggages = passenger
       .map((passengers) => passengers.baggage)
       .filter((baggages) => baggages !== null)
-      .map((baggage) => baggage.map(baggageMultiplier));
+      .map((baggage) => baggage.map(baggageMultiplier))
 
     const flightPrice = await Promise.all(
       [flight1Id, flight2Id].filter((e) => e !== undefined).map(getPrice),
-    );
+    )
 
-    const passengerQty = passenger.length;
+    const passengerQty = passenger.length
     const totalPassengerBaggagePrice = countBaggagePrice(
       passengerBaggages,
       flightPrice,
       passengerQty,
-    );
+    )
 
-    const totalPrice = flightPrice.map((e) => e * passengerQty).reduce((a, b) => a + b)
-      + totalPassengerBaggagePrice;
+    const totalPrice =
+      flightPrice.map((e) => e * passengerQty).reduce((a, b) => a + b) +
+      totalPassengerBaggagePrice
 
-    const userId = user !== null ? user.id : user;
+    const userId = user !== null ? user.id : user
     const booking = await Booking.create({
       bookingCode: randomstring.generate({ length: 10, charset: 'alphabetic' }),
       flight1Id,
@@ -147,19 +141,25 @@ const handleBookFlight = async (req, res, next) => {
       totalPassengerBaggagePrice:
         totalPassengerBaggagePrice !== null ? totalPassengerBaggagePrice : 0,
       totalPrice,
-    });
+    })
 
     const passengerBookingData = passenger.map((e) => ({
       passengerId: e.id,
       bookingId: booking.id,
-    }));
+    }))
 
     const passengerBooking = await PassengerBooking.bulkCreate(
       passengerBookingData,
-    );
+    )
 
     if (userId) {
-      await createNotification('Waiting for payment', booking.bookingCode, booking.id, false, userId);
+      await createNotification(
+        'Waiting for payment',
+        booking.bookingCode,
+        booking.id,
+        false,
+        userId,
+      )
     }
     const response = {
       booking,
@@ -169,7 +169,7 @@ const handleBookFlight = async (req, res, next) => {
     }
     const bookingDetails = await Booking.findByPk(booking.id, {
       include: bookingInc,
-    });
+    })
     req.payload = bookingDetails
     res.status(200).json(response)
     next()
@@ -179,9 +179,9 @@ const handleBookFlight = async (req, res, next) => {
         name: err.name,
         message: err.message,
       },
-    });
+    })
   }
-};
+}
 
 const handleSearchBookingByCode = async (req, res) => {
   try {
@@ -190,35 +190,35 @@ const handleSearchBookingByCode = async (req, res) => {
         bookingCode: req.query.bookingcode,
       },
       include: bookingInc,
-    });
-    res.status(200).json({ booking });
+    })
+    res.status(200).json({ booking })
   } catch (err) {
     res.status(404).json({
       error: {
         name: err.name,
         message: err.message,
       },
-    });
+    })
   }
-};
+}
 
 const handleGetUserBooking = async (req, res) => {
   try {
-    const user = userToken(req);
+    const user = userToken(req)
     if (user !== null) {
       const booking = await Booking.findAll({
         where: {
           userId: user.id,
         },
         include: bookingInc,
-      });
-      res.status(200).json({ booking });
+      })
+      res.status(200).json({ booking })
     } else {
       res.status(404).json({
         error: {
           message: 'you have too be logged in see your booking',
         },
-      });
+      })
     }
   } catch (err) {
     res.status(404).json({
@@ -226,14 +226,14 @@ const handleGetUserBooking = async (req, res) => {
         name: err.name,
         message: err.message,
       },
-    });
+    })
   }
-};
+}
 
 const handleDeleteBooking = async (req, res) => {
-  await Booking.destroy({ where: { id: req.params.id } });
-  res.status(204).end();
-};
+  await Booking.destroy({ where: { id: req.params.id } })
+  res.status(204).end()
+}
 
 const historyBooking = async (req, res) => {
   try {
@@ -248,62 +248,66 @@ const historyBooking = async (req, res) => {
         name: err.name,
         message: err.message,
       },
-    });
+    })
   }
 }
 
 const userToken = (req) => {
   try {
-    const token = req.headers.authorization?.split('Bearer ')[1];
-    const payload = decodeToken(token);
-    return payload;
+    const token = req.headers.authorization?.split('Bearer ')[1]
+    const payload = decodeToken(token)
+    return payload
   } catch (error) {
-    const payload = null;
-    return payload;
+    const payload = null
+    return payload
   }
-};
+}
 
-const decodeToken = (token) => jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+const decodeToken = (token) => {
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET)
+}
 
 const baggageMultiplier = (baggage) => {
   if (baggage === null) {
-    result = 0;
+    result = 0
   }
-  const multiplier = [20, 0];
+  const multiplier = [20, 0]
   while (baggage !== multiplier[0] && multiplier[1] < 10) {
-    multiplier[0] += 5;
-    multiplier[1] += 10;
+    multiplier[0] += 5
+    multiplier[1] += 10
     while (baggage !== multiplier[0]) {
-      multiplier[0] += 5;
-      multiplier[1] += 5;
+      multiplier[0] += 5
+      multiplier[1] += 5
     }
   }
-  let result = multiplier[1] / 100;
-  return result;
-};
+  let result = multiplier[1] / 100
+  return result
+}
 
 const countBaggagePrice = (passengerBaggages, flightPrice, passengerQty) => {
-  let result = 0;
+  let result = 0
+
   for (let i = 0; i < passengerQty; i++) {
     if (
-      typeof passengerBaggages[i][1] === 'undefined'
-      && typeof flightPrice[1] === 'undefined'
+      typeof passengerBaggages[i][1] === 'undefined' &&
+      typeof flightPrice[1] === 'undefined'
     ) {
-      result += passengerBaggages[i] * flightPrice[0];
+      result += passengerBaggages[i] * flightPrice[0]
     } else {
       for (let j = 0; j < passengerQty; j++) {
-        result += passengerBaggages[i][j] * flightPrice[i];
+        result += passengerBaggages[i][j] * flightPrice[i]
       }
     }
   }
-  return result;
-};
+
+  return result
+}
 
 const getPrice = async (flightId) => {
-  const flight = await Flight.findByPk(flightId);
-  const result = flight.price;
-  return result;
-};
+  const flight = await Flight.findByPk(flightId)
+  const result = flight.price
+  return result
+}
 
 module.exports = {
   handleListBookings,
@@ -312,4 +316,4 @@ module.exports = {
   handleSearchBookingByCode,
   handleDeleteBooking,
   historyBooking,
-};
+}

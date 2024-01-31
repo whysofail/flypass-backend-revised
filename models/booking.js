@@ -23,9 +23,6 @@ module.exports = (sequelize, DataTypes) => {
       this.belongsTo(models.User,{
         foreignKey: 'userId'
       })
-      this.belongsTo(models.BookingStatus,{
-        foreignKey: 'bookingStatusId'
-      })
       this.belongsTo(models.PassengerContact,{
         foreignKey: 'passengerContactId'
       })
@@ -41,7 +38,7 @@ module.exports = (sequelize, DataTypes) => {
     flight2Id: DataTypes.INTEGER,
     userId: DataTypes.INTEGER,
     passengerContactId: DataTypes.INTEGER,
-    bookingStatusId: DataTypes.INTEGER,
+    status: DataTypes.ENUM('Waiting','Confirmed'),
     passengerQty: DataTypes.INTEGER,
     totalPassengerBaggagePrice: DataTypes.INTEGER,
     totalPrice: DataTypes.DOUBLE

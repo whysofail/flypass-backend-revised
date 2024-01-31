@@ -177,7 +177,7 @@ const handleLoginGoogle = async (req, res, next) => {
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     });
-    const accesstToken = token[0];
+    const accessToken = token[0];
     const refreshToken = token[1];
     await User.update(
       { refreshToken },
@@ -196,7 +196,7 @@ const handleLoginGoogle = async (req, res, next) => {
       user: {
         id: user.id,
         email: user.email,
-        accesstToken,
+        accessToken,
       },
     });
   } catch (err) {
@@ -307,7 +307,7 @@ const login = async (req, res) => {
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
   });
-  const accesstToken = token[0];
+  const accessToken = token[0];
   const refreshToken = token[1];
   await User.update(
     { refreshToken },
@@ -326,7 +326,7 @@ const login = async (req, res) => {
     user: {
       id: user.id,
       email: user.email,
-      accesstToken,
+      accessToken,
     },
   });
 };
