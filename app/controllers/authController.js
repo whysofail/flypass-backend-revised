@@ -1,59 +1,59 @@
 /* eslint-disable max-len */
 /* eslint-disable no-unused-vars */
-const { google } = require('googleapis');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const randomstring = require('randomstring');
-const { Op } = require('sequelize');
-const { User, UserEmailConfirmation } = require('../../models');
+const { google } = require('googleapis')
+const bcrypt = require('bcryptjs')
+const jwt = require('jsonwebtoken')
+const randomstring = require('randomstring')
+const { Op } = require('sequelize')
+const { User, UserEmailConfirmation } = require('../../models')
 
-const SALT = 10;
+const SALT = 10
 
 const {
   GOOGLE_CLIENT_ID,
   GOOGLE_CLIENT_SECRET,
   GOOGLE_REDIRECT_URL,
   GOOGLE_CLIENT_ID_ANDROID,
-} = process.env;
+} = process.env
 
 const oauth2Client = new google.auth.OAuth2(
   GOOGLE_CLIENT_ID,
   GOOGLE_CLIENT_SECRET,
   GOOGLE_REDIRECT_URL,
-);
+)
 
 function encryptPassword(password) {
   return new Promise((resolve, reject) => {
     bcrypt.hash(password, SALT, (err, encryptedPassword) => {
       if (err) {
-        reject(err);
-        return;
+        reject(err)
+        return
       }
-      resolve(encryptedPassword);
-    });
-  });
+      resolve(encryptedPassword)
+    })
+  })
 }
 
 function checkPassword(encryptedPassword, password) {
   return new Promise((resolve, reject) => {
     bcrypt.compare(password, encryptedPassword, (err, isPasswordCorrect) => {
       if (err) {
-        reject(err);
-        return;
+        reject(err)
+        return
       }
-      resolve(isPasswordCorrect);
-    });
-  });
+      resolve(isPasswordCorrect)
+    })
+  })
 }
 
 function createToken(payload) {
   const access = jwt.sign(payload, process.env.ACCESS_TOKEN_SECRET, {
     expiresIn: '6h',
-  });
+  })
   const refresh = jwt.sign(payload, process.env.REFRESH_TOKEN_SECRET, {
     expiresIn: '7d',
-  });
-  return [access, refresh];
+  })
+  return [access, refresh]
 }
 
 const handleGoogleAuthUrl = async (req, res) => {
@@ -61,49 +61,47 @@ const handleGoogleAuthUrl = async (req, res) => {
     'https://www.googleapis.com/auth/userinfo.email',
     'https://www.googleapis.com/auth/userinfo.profile',
     'openid',
-  ];
+  ]
   try {
     const url = oauth2Client.generateAuthUrl({
       access_type: 'offline',
       scope: scopes,
       prompt: 'consent',
-    });
-    res.status(200).json(url);
+    })
+    res.status(200).json(url)
   } catch (err) {
-    res.status(401).json({ error: { name: err.name, message: err.message } });
+    res.status(401).json({ error: { name: err.name, message: err.message } })
   }
-};
+}
 
 const handleGoogleAuthCb = async (req, res) => {
-  const data = req.query;
-  const { tokens } = await oauth2Client.getToken(data.code);
-  res.status(200).json(tokens);
-};
+  const data = req.query
+  const { tokens } = await oauth2Client.getToken(data.code)
+  res.status(200).json(tokens)
+}
 
 const verifyIdToken = async (req, res, next) => {
-  const { IdToken } = req.body;
+  const { IdToken } = req.body
   try {
     const ticket = await oauth2Client.verifyIdToken({
       idToken: IdToken,
       audience: [GOOGLE_CLIENT_ID, GOOGLE_CLIENT_ID_ANDROID],
-    });
-    res.payload = ticket.getPayload();
-    next();
+    })
+    res.payload = ticket.getPayload()
+    next()
   } catch (err) {
     res.status(400).json({
       err: {
         name: err.name,
         message: err.message,
       },
-    });
+    })
   }
-};
+}
 
 const handleRegisterGoogle = async (req, res, next) => {
-  const data = res.payload;
-  const {
-    name, birthDate, gender, phone,
-  } = req.body;
+  const data = res.payload
+  const { name, birthDate, gender, phone } = req.body
   try {
     const isUser = await User.findOne({
       where: {
@@ -116,14 +114,12 @@ const handleRegisterGoogle = async (req, res, next) => {
           },
         ],
       },
-    });
+    })
     if (isUser) {
-      res
-        .status(400)
-        .json({
-          message: 'You already have an account registered with this email',
-        });
-      return;
+      res.status(400).json({
+        message: 'You already have an account registered with this email',
+      })
+      return
     }
     const user = await User.create({
       name,
@@ -134,13 +130,13 @@ const handleRegisterGoogle = async (req, res, next) => {
       image: data.picture,
       googleId: data.sub,
       roleId: 2,
-    });
+    })
     const emailConfirmation = await UserEmailConfirmation.create({
       userId: user.id,
       token: randomstring.generate(32),
-    });
-    res.status(200).json({ message: 'Register success.' });
-    req.payload = { user, emailConfirmation };
+    })
+    res.status(200).json({ message: 'Register success.' })
+    req.payload = { user, emailConfirmation }
     next()
   } catch (err) {
     res.status(400).json({
@@ -148,21 +144,21 @@ const handleRegisterGoogle = async (req, res, next) => {
         name: err.name,
         message: err.message,
       },
-    });
+    })
   }
-};
+}
 
 const handleLoginGoogle = async (req, res, next) => {
   try {
-    const data = res.payload;
+    const data = res.payload
 
     const user = await User.findOne({
       where: { googleId: data.sub },
-    });
+    })
 
     if (!user) {
-      res.status(404).json({ message: 'Email not found' });
-      return;
+      res.status(404).json({ message: 'Email not found' })
+      return
     }
 
     const token = createToken({
@@ -176,9 +172,9 @@ const handleLoginGoogle = async (req, res, next) => {
       roleId: user.roleId,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
-    });
-    const accessToken = token[0];
-    const refreshToken = token[1];
+    })
+    const accessToken = token[0]
+    const refreshToken = token[1]
     await User.update(
       { refreshToken },
       {
@@ -186,11 +182,11 @@ const handleLoginGoogle = async (req, res, next) => {
           id: user.id,
         },
       },
-    );
+    )
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000,
-    });
+    })
     res.status(201).json({
       message: 'login success',
       user: {
@@ -198,25 +194,24 @@ const handleLoginGoogle = async (req, res, next) => {
         email: user.email,
         accessToken,
       },
-    });
+    })
   } catch (err) {
     res
       .status(401)
-      .json({ error: { err, name: err.name, message: err.message } });
+      .json({ error: { err, name: err.name, message: err.message } })
   }
-};
+}
 
 const registerTest = (roles) => async (req, res, next) => {
-  const email = req.body.email.toLowerCase();
-  const {
-    name, password, confirmationPassword, birthDate, gender, phone,
-  } = req.body;
-  const role = roles !== 1 || null ? 2 : 1;
+  const email = req.body.email.toLowerCase()
+  const { name, password, confirmationPassword, birthDate, gender, phone } =
+    req.body
+  const role = roles !== 1 || null ? 2 : 1
   if (password !== confirmationPassword) {
-    res.status(401).json({ message: 'password doesn`t match' });
+    res.status(401).json({ message: 'password doesn`t match' })
   }
   try {
-    const encryptedPassword = await encryptPassword(password);
+    const encryptedPassword = await encryptPassword(password)
 
     const user = await User.create({
       name,
@@ -226,32 +221,31 @@ const registerTest = (roles) => async (req, res, next) => {
       gender,
       phone,
       roleId: role,
-    });
+    })
 
     const emailConfirmation = await UserEmailConfirmation.create({
       userId: user.id,
       token: randomstring.generate(64),
-    });
-    res.status(200).json({ message: 'Register success.' });
-    req.payload = { user, emailConfirmation };
-    next();
+    })
+    res.status(200).json({ message: 'Register success.' })
+    req.payload = { user, emailConfirmation }
+    next()
   } catch (err) {
-    res.status(400).json({ err: { name: err.name, message: err.message } });
+    res.status(400).json({ err: { name: err.name, message: err.message } })
   }
-};
+}
 
 const register = async (req, res, roles) => {
-  const email = req.body.email.toLowerCase();
-  const {
-    name, password, confirmationPassword, birthDate, gender, phone,
-  } = req.body;
-  const role = roles !== 1 ? 2 : 1;
+  const email = req.body.email.toLowerCase()
+  const { name, password, confirmationPassword, birthDate, gender, phone } =
+    req.body
+  const role = roles !== 1 ? 2 : 1
   if (password !== confirmationPassword) {
-    res.status(401).json({ message: 'password doesn`t match' });
-    return;
+    res.status(asd).json({ message: 'password doesn`t match' })
+    return
   }
   try {
-    const encryptedPassword = await encryptPassword(password);
+    const encryptedPassword = await encryptPassword(password)
 
     const user = await User.create({
       name,
@@ -261,38 +255,38 @@ const register = async (req, res, roles) => {
       gender,
       phone,
       roleId: role,
-    });
-    res.status(200).json('Register success');
+    })
+    res.status(200).json('Register success')
   } catch (err) {
-    res.status(400).json({ err: { name: err.name, message: err.message } });
+    res.status(400).json({ err: { name: err.name, message: err.message } })
   }
-};
+}
 
 const registerAdmin = async (req, res) => {
-  registerTest(1);
-};
+  registerTest(1)
+}
 
 const login = async (req, res) => {
-  const email = req.body.email.toLowerCase();
-  const { password } = req.body;
+  const email = req.body.email.toLowerCase()
+  const { password } = req.body
 
   const user = await User.findOne({
     where: { email },
-  });
+  })
 
   if (!user) {
-    res.status(404).json({ message: 'Email not found' });
-    return;
+    res.status(404).json({ message: 'Email not found' })
+    return
   }
 
   const isPasswordCorrect = await checkPassword(
     user.encryptedPassword,
     password,
-  );
+  )
 
   if (!isPasswordCorrect) {
-    res.status(401).json({ message: 'Wrong password!' });
-    return;
+    res.status(401).json({ message: 'Wrong password!' })
+    return
   }
 
   const token = createToken({
@@ -306,9 +300,9 @@ const login = async (req, res) => {
     roleId: user.roleId,
     createdAt: user.createdAt,
     updatedAt: user.updatedAt,
-  });
-  const accessToken = token[0];
-  const refreshToken = token[1];
+  })
+  const accessToken = token[0]
+  const refreshToken = token[1]
   await User.update(
     { refreshToken },
     {
@@ -316,44 +310,46 @@ const login = async (req, res) => {
         id: user.id,
       },
     },
-  );
+  )
   res.cookie('refreshToken', refreshToken, {
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000,
-  });
-  res.status(201).json({
+  })
+  res.status(200).json({
     message: 'login success',
     user: {
       id: user.id,
       email: user.email,
+      role: user.roleId,
       accessToken,
     },
-  });
-};
+  })
+}
 
 const whoAmI = async (req, res) => {
-  res.status(200).json(req.user);
-};
+  res.status(200).json(req.user)
+}
 
 const logout = async (req, res) => {
   try {
-    const refreshToken = req.body.refreshToken === undefined || req.body.refreshToken === null
-      ? req.cookies.refreshToken
-      : req.body.refreshToken;
+    const refreshToken =
+      req.body.refreshToken === undefined || req.body.refreshToken === null
+        ? req.cookies.refreshToken
+        : req.body.refreshToken
     if (!refreshToken) {
-      res.status(204).send('null');
-      return;
+      res.status(204).send('null')
+      return
     }
     const user = await User.findAll({
       where: {
         refreshToken,
       },
-    });
+    })
     if (!user[0]) {
-      res.status(204).send('notfound');
-      return;
+      res.status(204).send('notfound')
+      return
     }
-    const userId = user[0].id;
+    const userId = user[0].id
     await User.update(
       { refreshToken: null },
       {
@@ -361,39 +357,38 @@ const logout = async (req, res) => {
           id: userId,
         },
       },
-    );
-    res.clearCookie('refreshToken');
-    res.status(200).json('Log out success');
+    )
+    res.clearCookie('refreshToken')
+    res.setHeader('Clear-Site-Data', '"cookies"')
+    res.status(200).json('Log out success')
   } catch (error) {
-    res.status(400).json({ msg: 'Something went wrong' });
+    res.status(400).json({ msg: 'Something went wrong' })
   }
-};
+}
 
 const refreshToken = async (req, res) => {
   try {
-    const refresh = req.cookies.refreshToken;
+    const refresh = req.cookies.refreshToken
     if (!refresh) {
-      res.sendStatus(401);
-      return;
+      res.sendStatus(401)
+      return
     }
     const user = await User.findOne({
       where: {
         refreshToken: refresh,
       },
-    });
+    })
     if (!user) {
-      res.sendStatus(403);
-      return;
+      res.sendStatus(403)
+      return
     }
     jwt.verify(refresh, process.env.REFRESH_TOKEN_SECRET, (err, decoded) => {
       if (err) {
-        res.sendStatus(403);
-        return;
+        res.sendStatus(403)
+        return
       }
-      const userId = user.id;
-      const {
-        email, createdAt, updatedAt, roleId,
-      } = user;
+      const userId = user.id
+      const { email, createdAt, updatedAt, roleId } = user
       const accessToken = jwt.sign(
         {
           id: user.id,
@@ -411,35 +406,35 @@ const refreshToken = async (req, res) => {
         {
           expiresIn: '6h',
         },
-      );
+      )
       res.json({
         userId,
         email,
         accessToken,
-      });
-    });
+      })
+    })
   } catch (err) {
     res.status(422).json({
       error: {
         name: err.name,
         message: err.message,
       },
-    });
+    })
   }
-};
+}
 
 const handleEmailVerify = async (req, res) => {
   try {
-    const { token } = req.query;
+    const { token } = req.query
     const isTokenValid = await UserEmailConfirmation.findOne({
       where: {
         token,
       },
-    });
+    })
 
     if (!isTokenValid) {
-      res.status(400).json({ message: 'Invalid email verification Token!' });
-      return;
+      res.status(400).json({ message: 'Invalid email verification Token!' })
+      return
     }
 
     await User.update(
@@ -449,17 +444,17 @@ const handleEmailVerify = async (req, res) => {
           id: isTokenValid.userId,
         },
       },
-    );
-    res.status(200).json({ message: 'Email verification success' });
+    )
+    res.status(200).json({ message: 'Email verification success' })
   } catch (err) {
     res.status(400).json({
       error: {
         name: err.name,
         message: err.message,
       },
-    });
+    })
   }
-};
+}
 
 module.exports = {
   handleRegisterGoogle,
@@ -479,7 +474,7 @@ module.exports = {
     res.status(404).json({
       status: 'FAIL',
       message: 'Route not found!',
-    });
+    })
   },
   onError(err, _req, res, _next) {
     res.status(500).json({
@@ -488,6 +483,6 @@ module.exports = {
         name: err.name,
         message: err.message,
       },
-    });
+    })
   },
-};
+}

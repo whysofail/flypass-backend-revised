@@ -45,13 +45,13 @@ const flight2Inc = [
 const bookingInc = [
   {
     model: Flight,
-    as: 'flight1',
+    as: 'departureFlight',
     attributes: flightAttr,
     include: flightInc,
   },
   {
     model: Flight,
-    as: 'flight2',
+    as: 'returnFlight',
     attributes: flightAttr,
     include: flight2Inc,
   },
@@ -63,9 +63,6 @@ const bookingInc = [
   },
   {
     model: PassengerContact,
-  },
-  {
-    model: BookingStatus,
   },
 ]
 
@@ -85,7 +82,7 @@ const handleListBookings = async (req, res) => {
   }
 }
 
-const handleBookFlight = async (req, res, next) => {
+const handleBookFlight = async (req, res) => {
   try {
     const user = userToken(req)
     const {
@@ -107,26 +104,17 @@ const handleBookFlight = async (req, res, next) => {
     })
 
     const passengerData = req.body.passenger
+
     const passenger = await Passenger.bulkCreate(passengerData)
-    const passengerBaggages = passenger
-      .map((passengers) => passengers.baggage)
-      .filter((baggages) => baggages !== null)
-      .map((baggage) => baggage.map(baggageMultiplier))
 
     const flightPrice = await Promise.all(
       [flight1Id, flight2Id].filter((e) => e !== undefined).map(getPrice),
     )
 
     const passengerQty = passenger.length
-    const totalPassengerBaggagePrice = countBaggagePrice(
-      passengerBaggages,
-      flightPrice,
-      passengerQty,
-    )
-
-    const totalPrice =
-      flightPrice.map((e) => e * passengerQty).reduce((a, b) => a + b) +
-      totalPassengerBaggagePrice
+    const totalPrice = flightPrice
+      .map((e) => e * passengerQty)
+      .reduce((a, b) => a + b)
 
     const userId = user !== null ? user.id : user
     const booking = await Booking.create({
@@ -136,11 +124,9 @@ const handleBookFlight = async (req, res, next) => {
       roundtrip: flight2Id != null,
       userId,
       passengerContactId: passengerContact.id,
-      bookingStatusId: 1,
       passengerQty,
-      totalPassengerBaggagePrice:
-        totalPassengerBaggagePrice !== null ? totalPassengerBaggagePrice : 0,
       totalPrice,
+      status: 'Waiting',
     })
 
     const passengerBookingData = passenger.map((e) => ({
@@ -167,13 +153,11 @@ const handleBookFlight = async (req, res, next) => {
       passenger,
       passengerBooking,
     }
-    const bookingDetails = await Booking.findByPk(booking.id, {
-      include: bookingInc,
-    })
+    const bookingDetails = await Booking.findByPk(booking.id)
     req.payload = bookingDetails
     res.status(200).json(response)
-    next()
   } catch (err) {
+    console.log(err)
     res.status(422).json({
       error: {
         name: err.name,
@@ -203,13 +187,12 @@ const handleSearchBookingByCode = async (req, res) => {
 }
 
 const handleGetUserBooking = async (req, res) => {
+  const user = req.user
+
   try {
-    const user = userToken(req)
     if (user !== null) {
       const booking = await Booking.findAll({
-        where: {
-          userId: user.id,
-        },
+        where: { userId: req.user.id },
         include: bookingInc,
       })
       res.status(200).json({ booking })
@@ -252,12 +235,14 @@ const historyBooking = async (req, res) => {
   }
 }
 
-const userToken = (req) => {
+const userToken = async (req) => {
   try {
     const token = req.headers.authorization?.split('Bearer ')[1]
     const payload = decodeToken(token)
+    console.log(payload)
     return payload
   } catch (error) {
+    console.error(error)
     const payload = null
     return payload
   }

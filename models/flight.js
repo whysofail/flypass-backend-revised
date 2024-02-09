@@ -1,53 +1,48 @@
-"use strict";
-const { Model } = require("sequelize");
+'use strict'
+const { Model } = require('sequelize')
 module.exports = (sequelize, DataTypes) => {
   class Flight extends Model {
-    /**
-     * Helper method for defining associations.
-     * This method is not a part of Sequelize lifecycle.
-     * The `models/index` file will call this method automatically.
-     */
     static associate(models) {
       this.belongsTo(models.Airport, {
-        as: 'departureAirport'
-      });
+        as: 'departureAirport',
+      })
       this.belongsTo(models.Airport, {
-        foreignKey:'arrivalAirportId',
-        as: 'arrivalAirport'
-      });
+        foreignKey: 'arrivalAirportId',
+        as: 'arrivalAirport',
+      })
       this.belongsTo(models.FlightType, {
-        foreignKey: "flightTypeId",
-      });
+        foreignKey: 'flightTypeId',
+      })
       this.belongsTo(models.Airline, {
-        foreignKey: "airlineId",
-      });
+        foreignKey: 'airlineId',
+      })
       this.belongsTo(models.Airline, {
-        foreignKey: "airlineId",
-      });
+        foreignKey: 'airlineId',
+      })
       this.belongsTo(models.Airplane, {
-        foreignKey: "airplaneId",
-      });
-      this.belongsTo(models.FlightClass,{
-        foreignKey: 'flightClassId'
+        foreignKey: 'airplaneId',
+      })
+      this.belongsTo(models.FlightClass, {
+        foreignKey: 'flightClassId',
       })
       this.hasMany(models.Wishlist, {
-        foreignKey: 'flightId'
-      });
-      this.hasMany(models.Booking,{
-        foreignKey: 'flight1Id',
-        as: 'flight1'
+        foreignKey: 'flightId',
       })
-      this.hasMany(models.Booking,{
+      this.hasMany(models.Booking, {
+        foreignKey: 'flight1Id',
+        as: 'departureFlight',
+      })
+      this.hasMany(models.Booking, {
         foreignKey: 'flight2Id',
-        as: 'flight2'
+        as: 'returnFlight',
       })
     }
   }
   Flight.init(
     {
-      flightCode : DataTypes.STRING,
-      airlineId : DataTypes.INTEGER,
-      airplaneId : DataTypes.INTEGER,
+      flightCode: DataTypes.STRING,
+      airlineId: DataTypes.INTEGER,
+      airplaneId: DataTypes.INTEGER,
       departureAirportId: DataTypes.INTEGER,
       arrivalAirportId: DataTypes.INTEGER,
       departureDate: DataTypes.DATEONLY,
@@ -63,8 +58,8 @@ module.exports = (sequelize, DataTypes) => {
     },
     {
       sequelize,
-      modelName: "Flight",
-    }
-  );
-  return Flight;
-};
+      modelName: 'Flight',
+    },
+  )
+  return Flight
+}

@@ -1,5 +1,5 @@
-"use strict";
-const { Model } = require("sequelize");
+'use strict'
+const { Model } = require('sequelize')
 module.exports = (sequelize, DataTypes) => {
   class Booking extends Model {
     /**
@@ -10,41 +10,43 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       this.belongsToMany(models.Passenger, {
         through: 'PassengerBooking',
-        foreignKey: 'bookingId'
+        foreignKey: 'bookingId',
       })
-      this.belongsTo(models.Flight,{
+      this.belongsTo(models.Flight, {
         foreignKey: 'flight1Id',
-        as: 'flight1'
+        as: 'departureFlight',
       })
-      this.belongsTo(models.Flight,{
+      this.belongsTo(models.Flight, {
         foreignKey: 'flight2Id',
-        as: 'flight2'
+        as: 'returnFlight',
       })
-      this.belongsTo(models.User,{
-        foreignKey: 'userId'
+      this.belongsTo(models.User, {
+        foreignKey: 'userId',
       })
-      this.belongsTo(models.PassengerContact,{
-        foreignKey: 'passengerContactId'
+      this.belongsTo(models.PassengerContact, {
+        foreignKey: 'passengerContactId',
       })
       this.hasMany(models.walletHistory, {
         foreignKey: 'bookingId',
-      });
+      })
     }
   }
-  Booking.init({
-    bookingCode: DataTypes.STRING,
-    roundtrip: DataTypes.BOOLEAN,
-    flight1Id: DataTypes.INTEGER,
-    flight2Id: DataTypes.INTEGER,
-    userId: DataTypes.INTEGER,
-    passengerContactId: DataTypes.INTEGER,
-    status: DataTypes.ENUM('Waiting','Confirmed'),
-    passengerQty: DataTypes.INTEGER,
-    totalPassengerBaggagePrice: DataTypes.INTEGER,
-    totalPrice: DataTypes.DOUBLE
-  }, {
-    sequelize,
-    modelName: 'Booking',
-  });
-  return Booking;
-};
+  Booking.init(
+    {
+      bookingCode: DataTypes.STRING,
+      roundtrip: DataTypes.BOOLEAN,
+      flight1Id: DataTypes.INTEGER,
+      flight2Id: DataTypes.INTEGER,
+      userId: DataTypes.INTEGER,
+      passengerContactId: DataTypes.INTEGER,
+      status: DataTypes.ENUM('Waiting', 'Confirmed'),
+      passengerQty: DataTypes.INTEGER,
+      totalPrice: DataTypes.DOUBLE,
+    },
+    {
+      sequelize,
+      modelName: 'Booking',
+    },
+  )
+  return Booking
+}
